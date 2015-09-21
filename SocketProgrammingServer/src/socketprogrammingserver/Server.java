@@ -13,7 +13,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 /**
  *
@@ -48,6 +48,7 @@ public class Server extends javax.swing.JFrame {
         jScrollPane3 = new javax.swing.JScrollPane();
         pesanTextArea = new javax.swing.JTextArea();
         kirimButton = new javax.swing.JButton();
+        statusLabel = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setTitle("ServerSide: LUTFI");
@@ -89,6 +90,8 @@ public class Server extends javax.swing.JFrame {
             }
         });
 
+        statusLabel.setText("<<Status>>");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -103,11 +106,13 @@ public class Server extends javax.swing.JFrame {
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addGap(153, 153, 153)
-                                .addComponent(jButton2))
+                                .addComponent(jButton2)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(statusLabel))
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addContainerGap()
                                 .addComponent(jLabel1)))
-                        .addGap(0, 223, Short.MAX_VALUE)))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(121, 121, 121)
@@ -127,7 +132,9 @@ public class Server extends javax.swing.JFrame {
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jButton2)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton2)
+                    .addComponent(statusLabel))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -165,8 +172,8 @@ public class Server extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-    private static ServerSocket serverSocket;
-    private static Socket clientSocket;
+    private static ServerSocket serverSocket = null;
+    private static Socket clientSocket = null;
     private static PrintWriter out;
     private static BufferedReader in;
     private static BufferedReader stdIn;
@@ -176,7 +183,7 @@ public class Server extends javax.swing.JFrame {
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         // TODO add your handling code here:
 //        historiTextArea.append("Tunggu client tersambung"+"\n");
-        historiTextArea.updateUI();
+//        historiTextArea.updateUI();
         String port = portTextField.getText();
         Boolean portOK = cekAngkaPort(port);
         System.out.println(portOK);
@@ -185,35 +192,36 @@ public class Server extends javax.swing.JFrame {
             try {
 
                 serverSocket = new ServerSocket(portNumber);
-                JOptionPane.showMessageDialog(this, "Port Server " + portNumber + " telah dibuka" + "\n");
-//                historiTextArea.append("Port Server " + portNumber + " telah dibuka"+"\n");
-                clientSocket = serverSocket.accept();
-                historiTextArea.append("\nClient terhubung ke server" + "\n");
-                in = new BufferedReader(
-                        new InputStreamReader(clientSocket.getInputStream()));
-
+                historiTextArea.append("\nPort Server " + portNumber + " telah dibuka" + "\n");
                 new Thread() {
                     @Override
                     public void run() {
                         try {
 
-                            while ((inputLine = in.readLine()) != null) {
-                                historiTextArea.append("Febri: " + inputLine + "\n");
-                                if ("0".equals(inputLine) || "1".equals(inputLine) || "2".equals(inputLine) || "3".equals(inputLine)) {
-                                    out = new PrintWriter(clientSocket.getOutputStream(), true);
-                                    String s = send(inputLine);
-                                    out.println(s);
+                            clientSocket = serverSocket.accept();
+                            historiTextArea.append("\nClient terhubung ke server" + "\n");
+                            in = new BufferedReader(
+                                        new InputStreamReader(clientSocket.getInputStream()));
+                            
+                                while ((inputLine = in.readLine()) != null) {
+                                    historiTextArea.append("Febri: " + inputLine + "\n");
+                                    if ("0".equals(inputLine) || "1".equals(inputLine) || "2".equals(inputLine) || "3".equals(inputLine)) {
+                                        out = new PrintWriter(clientSocket.getOutputStream(), true);
+                                        String s = send(inputLine);
+                                        out.println(s);
+                                    }
                                 }
-                            }
                         } catch (IOException ex) {
-                            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+//                            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                            log(ex.getMessage());
                         }
                     }
                 }.start();
+
             } catch (IOException ex) {
-                historiTextArea.append("Exception caught when trying to listen on port "
+                log("Exception caught when trying to listen on port "
                         + portNumber + " or listening for a connection" + "\n");
-                historiTextArea.append(ex.getMessage() + "\n");
+                log(ex.getMessage() + "\n");
             }
         }
     }//GEN-LAST:event_jButton2ActionPerformed
@@ -229,7 +237,7 @@ public class Server extends javax.swing.JFrame {
             try (BufferedReader br = new BufferedReader(new FileReader("src\\socketprogrammingserver\\Lutfi.xml"))) {
                 StringBuilder sb = new StringBuilder();
                 String line = br.readLine();
-//src\\socketprogrammingserver
+
                 while (line != null) {
                     sb.append(line);
                     sb.append(System.lineSeparator());
@@ -371,6 +379,7 @@ public class Server extends javax.swing.JFrame {
     private javax.swing.JButton kirimButton;
     private javax.swing.JTextArea pesanTextArea;
     private javax.swing.JTextField portTextField;
+    private javax.swing.JLabel statusLabel;
     // End of variables declaration//GEN-END:variables
 
     private Boolean cekAngkaPort(String port) {
@@ -380,5 +389,15 @@ public class Server extends javax.swing.JFrame {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private void log(final String pesan) {
+        SwingUtilities.invokeLater(new Runnable() {
+
+            @Override
+            public void run() {
+                historiTextArea.append(pesan);
+            }
+        });
     }
 }
