@@ -4,6 +4,7 @@
  */
 package socketprogrammingserver;
 
+import com.sun.glass.ui.View;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -11,8 +12,10 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 /**
@@ -170,7 +173,8 @@ public class Server extends javax.swing.JFrame {
     private static PrintWriter out;
     private static BufferedReader in;
     private static BufferedReader stdIn;
-    String inputLine;
+    private static final ArrayList<ServerControl> clientList = new ArrayList<ServerControl>();
+    int clientNb = 0;
     Integer portNumber = null;
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
@@ -190,36 +194,28 @@ public class Server extends javax.swing.JFrame {
                     @Override
                     public void run() {
                         try {
+                            while (true) {
+                                clientSocket = serverSocket.accept();
+                                ServerControl sc = new ServerControl(clientSocket, clientNb++);
+                                clientList.add(sc);
+                                historiTextArea.append("\nClient #" + clientNb + " terhubung ke server" + "\n");
 
-                            clientSocket = serverSocket.accept();
-                            historiTextArea.append("\nClient terhubung ke server" + "\n");
-                            in = new BufferedReader(
-                                        new InputStreamReader(clientSocket.getInputStream()));
-                            
-                                while ((inputLine = in.readLine()) != null) {
-                                    historiTextArea.append("Febri: " + inputLine + "\n");
-                                    if ("0".equals(inputLine) || "1".equals(inputLine) || "2".equals(inputLine) || "3".equals(inputLine)) {
-                                        out = new PrintWriter(clientSocket.getOutputStream(), true);
-                                        String s = send(inputLine);
-                                        out.println(s);
-                                    }
-                                }
+                            }
                         } catch (IOException ex) {
-//                            Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
-                            log(ex.getMessage());
+                            logText(ex.getMessage());
                         }
                     }
                 }.start();
 
             } catch (IOException ex) {
-                log("Exception caught when trying to listen on port "
+                logText("Exception caught when trying to listen on port "
                         + portNumber + " or listening for a connection" + "\n");
-                log(ex.getMessage() + "\n");
+                logText(ex.getMessage() + "\n");
             }
         }
     }//GEN-LAST:event_jButton2ActionPerformed
 
-    private String send(String pilihan) {
+    private static String send(String pilihan) {
         String everything = null;
         if ("0".equals(pilihan.trim())) {
             everything = "0.Menu\n"
@@ -292,24 +288,18 @@ public class Server extends javax.swing.JFrame {
     }
 
     private void kirimButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_kirimButtonActionPerformed
-        try {
-            out = new PrintWriter(clientSocket.getOutputStream(), true);
-            String userInput = pesanTextArea.getText();
-            if (userInput.trim() != null) {
-                historiTextArea.append(userInput + "\n");
-                out.println(userInput);
-
+//        try {
+//            out = new PrintWriter(clientSocket.getOutputStream(), true);
+        String userInput = pesanTextArea.getText();
+        for (ServerControl sc : clientList) {
+            System.out.println(sc.clientNo);
+            try {
+                sc.kirimPesan(userInput);
+                System.out.println(sc.sockets);
+            } catch (IOException ex) {
+                Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                ex.getMessage();
             }
-
-//            System.out.println("inputline "+inputLine);
-//            if (userInput.trim() != null) {
-//                historiTextArea.append(userInput + "\n");
-//                out.println(Send(inputLine));
-//            }
-        } catch (IOException ex) {
-            Logger.getLogger(Server.class
-                    .getName()).log(Level.SEVERE, null, ex);
-            pesanTextArea.append(ex.getMessage());
         }
         pesanTextArea.setText("");
         pesanTextArea.selectAll();
@@ -361,7 +351,7 @@ public class Server extends javax.swing.JFrame {
         });
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JTextArea historiTextArea;
+    private static javax.swing.JTextArea historiTextArea;
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
@@ -383,7 +373,7 @@ public class Server extends javax.swing.JFrame {
         }
     }
 
-    private void log(final String pesan) {
+    public void logText(final String pesan) {
         SwingUtilities.invokeLater(new Runnable() {
 
             @Override
@@ -392,4 +382,72 @@ public class Server extends javax.swing.JFrame {
             }
         });
     }
+
+    private class ServerControl {
+
+        private Socket sockets;
+        private int clientNo;
+
+        public ServerControl(final Socket socket, final int clientNo) {
+            this.sockets = socket;
+            this.clientNo = clientNo;
+            log("New connection with client# " + clientNo + " at " + socket);
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        ins = new BufferedReader(
+                                new InputStreamReader(socket.getInputStream()));
+                        outs = new PrintWriter(socket.getOutputStream(), true);
+
+                        outs.println("Hello, you are client #" + clientNo + ".");
+                        outs.println("Enter a line with only a period to quit");
+
+                        new Thread() {
+                            @Override
+                            public void run() {
+                                try {
+                                    String inputLine;
+                                    while ((inputLine = ins.readLine()) != null) {
+                                        historiTextArea.append("Febri #" + clientNo + ": " + inputLine + "\n");
+                                        if ("0".equals(inputLine) || "1".equals(inputLine) || "2".equals(inputLine) || "3".equals(inputLine)) {
+                                            String s = send(inputLine);
+                                            outs.println(s);
+                                        }
+                                    }
+                                } catch (IOException ex) {
+                                    log(ex.getMessage());
+                                } finally {
+                                    try {
+                                        clientSocket.close();
+                                    } catch (IOException ex) {
+                                        Logger.getLogger(Server.class.getName()).log(Level.SEVERE, null, ex);
+                                    }
+                                }
+                            }
+                        }.start();
+
+                    } catch (IOException e) {
+                        log("Error handling client# " + clientNo + ": " + e);
+                    }
+                }
+            }.start();
+        }
+
+        BufferedReader ins = null;
+        PrintWriter outs = null;
+
+        private void kirimPesan(String pesan) throws IOException {
+            if (pesan.trim() != null) {
+                historiTextArea.append(pesan + "\n");
+                outs.println(pesan);
+
+            }
+        }
+
+        private void log(String message) {
+            System.out.println(message);
+        }
+    }
+
 }

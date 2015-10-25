@@ -190,14 +190,14 @@ public class Client extends javax.swing.JFrame {
                     @Override
                     public void run() {
                         try {
-
+                            
                             String inputLine;
                             while ((inputLine = in.readLine()) != null) {
 //                                historiTextArea.append("Lutfi: " + inputLine + "\n");
                                 try (BufferedReader br = new BufferedReader(new FileReader(inputLine))) {
                                     StringBuilder sb = new StringBuilder();
                                     String line = br.readLine();
-
+                                    
                                     while (line != null) {
                                         sb.append(line);
                                         sb.append(System.lineSeparator());
@@ -211,10 +211,11 @@ public class Client extends javax.swing.JFrame {
                             }
                         } catch (IOException ex) {
                             Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+                            historiTextArea.append(ex.getMessage());
                         }
                     }
                 }.start();
-
+                
             } catch (UnknownHostException e) {
                 historiTextArea.append("Don't know about host " + hostName + "\n");
             } catch (IOException e) {
